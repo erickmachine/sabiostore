@@ -30,23 +30,43 @@ async function handleMenu(sock, sender) {
   const botName = db.getSetting('bot_name') || 'SabioStore';
   
   const menu = `
-*${botName}*
-
-Ola! Seja bem-vindo(a)!
-
-Seu saldo: *${formatMoney(user.balance)}*
-
-*COMANDOS*
-
-/estoque - Ver produtos
-/categorias - Ver categorias
-/saldo - Ver seu saldo
-/pix <valor> - Adicionar saldo
-/comprar <id> - Comprar produto
-/meuspedidos - Ver compras
-/suporte <msg> - Abrir ticket
-/feedback <msg> - Enviar feedback
-/menu - Ver este menu
+╔══════════════════════════════╗
+║     🛒 *${botName}* 🛒     
+╠══════════════════════════════╣
+║                              
+║  👋 Olá! Seja bem-vindo(a)!  
+║                              
+║  💰 Seu saldo: *${formatMoney(user.balance)}*
+║                              
+╠══════════════════════════════╣
+║  📋 *COMANDOS DISPONÍVEIS*   
+╠══════════════════════════════╣
+║                              
+║  📦 /estoque                 
+║     _Ver produtos disponíveis_
+║                              
+║  🏷️ /categorias              
+║     _Ver categorias_         
+║                              
+║  💳 /saldo                   
+║     _Consultar seu saldo_    
+║                              
+║  💵 /pix <valor>             
+║     _Adicionar saldo via PIX_
+║                              
+║  🛍️ /comprar <id>            
+║     _Comprar um produto_     
+║                              
+║  📜 /meuspedidos             
+║     _Ver suas compras_       
+║                              
+║  🎧 /suporte <msg>           
+║     _Abrir ticket de suporte_
+║                              
+║  ⭐ /feedback <msg>          
+║     _Enviar sua opinião_     
+║                              
+╚══════════════════════════════╝
 `.trim();
 
   await sock.sendMessage(sender, { text: menu });
@@ -56,22 +76,36 @@ async function handleCategorias(sock, sender) {
   const categories = db.getCategories(true);
   
   if (categories.length === 0) {
-    await sock.sendMessage(sender, { text: 'Nenhuma categoria disponivel.' });
+    await sock.sendMessage(sender, { text: '❌ Nenhuma categoria disponível.' });
     return;
   }
 
-  let message = '*CATEGORIAS DISPONIVEIS*\n\n';
+  let message = `
+╔══════════════════════════════╗
+║   🏷️ *CATEGORIAS* 🏷️       
+╠══════════════════════════════╣`;
 
   for (const cat of categories) {
     const products = db.getProductsByCategory(cat.id);
-    message += `*${cat.name}*\n`;
-    if (cat.description) message += `   ${cat.description}\n`;
-    message += `   ${products.length} produto(s)\n\n`;
+    message += `
+║                              
+║  📁 *${cat.name}*`;
+    if (cat.description) {
+      message += `
+║     ${cat.description}`;
+    }
+    message += `
+║     📦 ${products.length} produto(s)`;
   }
 
-  message += '\nDigite /estoque para ver todos os produtos.';
+  message += `
+║                              
+╠══════════════════════════════╣
+║  Digite /estoque para ver    
+║  todos os produtos           
+╚══════════════════════════════╝`;
 
-  await sock.sendMessage(sender, { text: message });
+  await sock.sendMessage(sender, { text: message.trim() });
 }
 
 async function handleEstoque(sock, sender, args) {
@@ -79,11 +113,16 @@ async function handleEstoque(sock, sender, args) {
   const products = db.getProducts(true);
   
   if (products.length === 0) {
-    await sock.sendMessage(sender, { text: 'Nenhum produto disponivel no momento.' });
+    await sock.sendMessage(sender, { text: '❌ Nenhum produto disponível no momento.' });
     return;
   }
 
-  let message = `*ESTOQUE*\n\nOla! Seu saldo: *${formatMoney(user.balance)}*\n`;
+  let message = `
+╔══════════════════════════════╗
+║     📦 *ESTOQUE* 📦         
+╠══════════════════════════════╣
+║  💰 Seu saldo: *${formatMoney(user.balance)}*
+╠══════════════════════════════╣`;
 
   // Agrupar por categoria
   const categories = {};
@@ -94,22 +133,37 @@ async function handleEstoque(sock, sender, args) {
   }
 
   for (const [category, prods] of Object.entries(categories)) {
-    message += `\n*${category}*\n`;
-    message += '-------------------\n';
+    message += `
+║                              
+║  🏷️ *${category}*           
+║  ─────────────────────────`;
     
     for (const product of prods) {
       const stockCount = db.getProductStock(product.id);
       
-      message += `\n*${product.id}. ${product.name}*\n`;
-      if (product.description1) message += `   ${product.description1}\n`;
-      if (product.description2) message += `   ${product.description2}\n`;
-      if (product.description3) message += `   ${product.description3}\n`;
-      if (product.description4) message += `   ${product.description4}\n`;
-      message += `   Estoque: ${stockCount}\n`;
-      message += `   Valor: *${formatMoney(product.price)}*\n`;
-      message += `   /comprar ${product.id}\n`;
+      message += `
+║                              
+║  🔹 *${product.id}. ${product.name}*`;
+      
+      if (product.description1) {
+        message += `
+║     📝 ${product.description1}`;
+      }
+      if (product.description2) {
+        message += `
+║     📝 ${product.description2}`;
+      }
+      
+      message += `
+║     📊 Estoque: ${stockCount}
+║     💵 Valor: *${formatMoney(product.price)}*
+║     🛒 /comprar ${product.id}`;
     }
   }
+
+  message += `
+║                              
+╚══════════════════════════════╝`;
 
   await sock.sendMessage(sender, { text: message.trim() });
 }
@@ -117,14 +171,23 @@ async function handleEstoque(sock, sender, args) {
 async function handleSaldo(sock, sender) {
   const user = db.getUser(formatPhone(sender)) || db.createUser(formatPhone(sender));
   
-  const message = `*SEU SALDO*
-
-Saldo atual: *${formatMoney(user.balance)}*
-
-Para adicionar saldo:
-/pix <valor>
-
-Exemplo: /pix 10`.trim();
+  const message = `
+╔══════════════════════════════╗
+║     💳 *SEU SALDO* 💳       
+╠══════════════════════════════╣
+║                              
+║  💰 Saldo atual:             
+║                              
+║     *${formatMoney(user.balance)}*
+║                              
+╠══════════════════════════════╣
+║  💵 Para adicionar saldo:    
+║                              
+║     /pix <valor>             
+║                              
+║  📌 Exemplo: /pix 10         
+╚══════════════════════════════╝
+`.trim();
 
   await sock.sendMessage(sender, { text: message });
 }
@@ -134,14 +197,25 @@ async function handlePix(sock, sender, args) {
   
   if (!amount || isNaN(amount) || amount < 1) {
     await sock.sendMessage(sender, { 
-      text: 'Valor invalido. Use: /pix <valor>\nExemplo: /pix 10\n\nValor minimo: R$1,00' 
+      text: `
+╔══════════════════════════════╗
+║     ⚠️ *VALOR INVÁLIDO* ⚠️   
+╠══════════════════════════════╣
+║                              
+║  Use: /pix <valor>           
+║                              
+║  📌 Exemplo: /pix 10         
+║                              
+║  💵 Valor mínimo: R$1,00     
+╚══════════════════════════════╝
+`.trim()
     });
     return;
   }
 
   if (amount > 1000) {
     await sock.sendMessage(sender, { 
-      text: 'Valor maximo por transacao: R$1.000,00' 
+      text: '⚠️ Valor máximo por transação: R$1.000,00' 
     });
     return;
   }
@@ -150,7 +224,7 @@ async function handlePix(sock, sender, args) {
   const pixKey = db.getSetting('pix_key') || 'patinhasqueprecisam@gmail.com';
 
   try {
-    await sock.sendMessage(sender, { text: 'Gerando pagamento PIX...' });
+    await sock.sendMessage(sender, { text: '⏳ Gerando pagamento PIX...' });
     
     const payment = await createPixPayment(amount, `SabioStore - Saldo para ${formatPhone(sender)}`);
     
@@ -162,21 +236,35 @@ async function handlePix(sock, sender, args) {
       payment.qr_code_base64
     );
 
-    const message = `*PAGAMENTO PIX*
-
-Valor: *${formatMoney(amount)}*
-
-*Chave PIX (Email):*
-${pixKey}
-
-*Codigo PIX Copia e Cola:*
+    const message = `
+╔══════════════════════════════╗
+║     💵 *PAGAMENTO PIX* 💵   
+╠══════════════════════════════╣
+║                              
+║  💰 Valor: *${formatMoney(amount)}*
+║                              
+╠══════════════════════════════╣
+║  📧 *CHAVE PIX (Email):*     
+╠══════════════════════════════╣
+║                              
+║  ${pixKey}
+║                              
+╠══════════════════════════════╣
+║  📋 *CÓDIGO COPIA E COLA:*   
+╠══════════════════════════════╣
 
 \`\`\`
 ${payment.qr_code}
 \`\`\`
 
-Este codigo expira em 30 minutos.
-Apos o pagamento, seu saldo sera creditado automaticamente!`.trim();
+╔══════════════════════════════╗
+║  ⏰ Expira em 30 minutos     
+║                              
+║  ✅ Após o pagamento, seu    
+║  saldo será creditado        
+║  automaticamente!            
+╚══════════════════════════════╝
+`.trim();
 
     await sock.sendMessage(sender, { text: message });
 
@@ -185,14 +273,14 @@ Apos o pagamento, seu saldo sera creditado automaticamente!`.trim();
       const imageBuffer = Buffer.from(payment.qr_code_base64, 'base64');
       await sock.sendMessage(sender, { 
         image: imageBuffer,
-        caption: 'QR Code PIX - Escaneie para pagar'
+        caption: '📱 QR Code PIX - Escaneie para pagar'
       });
     }
 
   } catch (error) {
     console.error('Error creating PIX:', error);
     await sock.sendMessage(sender, { 
-      text: 'Erro ao gerar pagamento. Tente novamente mais tarde.' 
+      text: '❌ Erro ao gerar pagamento. Tente novamente mais tarde.' 
     });
   }
 }
@@ -203,21 +291,31 @@ async function handleComprar(sock, sender, args) {
   
   if (!productId) {
     await sock.sendMessage(sender, { 
-      text: 'Use: /comprar <id do produto> [quantidade]\nExemplo: /comprar 1' 
+      text: `
+╔══════════════════════════════╗
+║     ℹ️ *COMO COMPRAR* ℹ️     
+╠══════════════════════════════╣
+║                              
+║  Use: /comprar <id> [qtd]    
+║                              
+║  📌 Exemplo: /comprar 1      
+║  📌 Exemplo: /comprar 1 3    
+╚══════════════════════════════╝
+`.trim()
     });
     return;
   }
 
   const product = db.getProduct(productId);
   if (!product || !product.is_active) {
-    await sock.sendMessage(sender, { text: 'Produto nao encontrado.' });
+    await sock.sendMessage(sender, { text: '❌ Produto não encontrado.' });
     return;
   }
 
   const availableStock = db.getProductStock(productId);
   if (availableStock < quantity) {
     await sock.sendMessage(sender, { 
-      text: `Estoque insuficiente. Disponivel: ${availableStock}` 
+      text: `❌ Estoque insuficiente!\n\n📦 Disponível: ${availableStock}` 
     });
     return;
   }
@@ -227,14 +325,28 @@ async function handleComprar(sock, sender, args) {
 
   if (user.balance < totalPrice) {
     await sock.sendMessage(sender, { 
-      text: `Saldo insuficiente!\n\nSeu saldo: ${formatMoney(user.balance)}\nPreco total: ${formatMoney(totalPrice)}\n\nAdicione saldo com /pix ${Math.ceil(totalPrice - user.balance)}` 
+      text: `
+╔══════════════════════════════╗
+║   ❌ *SALDO INSUFICIENTE*   
+╠══════════════════════════════╣
+║                              
+║  💰 Seu saldo: ${formatMoney(user.balance)}
+║  💵 Preço total: ${formatMoney(totalPrice)}
+║                              
+║  📌 Faltam: ${formatMoney(totalPrice - user.balance)}
+║                              
+╠══════════════════════════════╣
+║  Adicione saldo com:         
+║  /pix ${Math.ceil(totalPrice - user.balance)}
+╚══════════════════════════════╝
+`.trim()
     });
     return;
   }
 
   const stockItems = db.getAvailableStockItems(productId, quantity);
   if (stockItems.length < quantity) {
-    await sock.sendMessage(sender, { text: 'Erro ao processar compra. Tente novamente.' });
+    await sock.sendMessage(sender, { text: '❌ Erro ao processar compra. Tente novamente.' });
     return;
   }
 
@@ -262,25 +374,37 @@ async function handleComprar(sock, sender, args) {
     second: '2-digit'
   });
 
-  let deliveryMessage = `*COMPRA REALIZADA*
-
-Produto: ${product.name}
-Quantidade: ${quantity}
-Total: ${formatMoney(totalPrice)}
-Novo saldo: ${formatMoney(user.balance - totalPrice)}
-
-Data/Hora: ${purchaseTime}
-
-*Seus itens:*
-`;
+  let deliveryMessage = `
+╔══════════════════════════════╗
+║   ✅ *COMPRA REALIZADA!* ✅  
+╠══════════════════════════════╣
+║                              
+║  📦 Produto: ${product.name}
+║  📊 Quantidade: ${quantity}
+║  💵 Total: ${formatMoney(totalPrice)}
+║  💰 Novo saldo: ${formatMoney(user.balance - totalPrice)}
+║                              
+║  🕐 Data/Hora:               
+║  ${purchaseTime}
+║                              
+╠══════════════════════════════╣
+║  🔐 *SEUS ITENS:*            
+╠══════════════════════════════╣`;
 
   for (let i = 0; i < itemContents.length; i++) {
-    deliveryMessage += `\n${i + 1}. \`${itemContents[i]}\``;
+    deliveryMessage += `
+║                              
+║  ${i + 1}. \`${itemContents[i]}\``;
   }
 
-  deliveryMessage += '\n\nObrigado pela compra!';
+  deliveryMessage += `
+║                              
+╠══════════════════════════════╣
+║  🙏 Obrigado pela compra!    
+║  ⭐ Deixe seu /feedback      
+╚══════════════════════════════╝`;
 
-  await sock.sendMessage(sender, { text: deliveryMessage });
+  await sock.sendMessage(sender, { text: deliveryMessage.trim() });
 
   checkLowStock(sock);
 }
@@ -289,24 +413,36 @@ async function handleMeusPedidos(sock, sender) {
   const purchases = db.getUserPurchases(formatPhone(sender));
   
   if (purchases.length === 0) {
-    await sock.sendMessage(sender, { text: 'Voce ainda nao fez nenhuma compra.' });
+    await sock.sendMessage(sender, { text: '📭 Você ainda não fez nenhuma compra.' });
     return;
   }
 
-  let message = `*SUAS COMPRAS*\n`;
+  let message = `
+╔══════════════════════════════╗
+║     📜 *SUAS COMPRAS* 📜     
+╠══════════════════════════════╣`;
 
   for (const purchase of purchases.slice(0, 10)) {
     const dateTime = formatDateTime(purchase.purchase_date, purchase.purchase_time);
-    message += `\n*${purchase.product_name}*`;
-    message += `\n   Qtd: ${purchase.quantity} | Total: ${formatMoney(purchase.total_price)}`;
-    message += `\n   Data/Hora: ${dateTime}\n`;
+    message += `
+║                              
+║  🔹 *${purchase.product_name}*
+║     📊 Qtd: ${purchase.quantity}
+║     💵 Total: ${formatMoney(purchase.total_price)}
+║     🕐 ${dateTime}`;
   }
 
   if (purchases.length > 10) {
-    message += `\n... e mais ${purchases.length - 10} compra(s)`;
+    message += `
+║                              
+║  ... e mais ${purchases.length - 10} compra(s)`;
   }
 
-  await sock.sendMessage(sender, { text: message });
+  message += `
+║                              
+╚══════════════════════════════╝`;
+
+  await sock.sendMessage(sender, { text: message.trim() });
 }
 
 async function handleSuporte(sock, sender, args) {
@@ -314,7 +450,18 @@ async function handleSuporte(sock, sender, args) {
   
   if (!message) {
     await sock.sendMessage(sender, { 
-      text: 'Use: /suporte <sua mensagem>\nExemplo: /suporte Preciso de ajuda com minha compra' 
+      text: `
+╔══════════════════════════════╗
+║     🎧 *SUPORTE* 🎧          
+╠══════════════════════════════╣
+║                              
+║  Use: /suporte <mensagem>    
+║                              
+║  📌 Exemplo:                 
+║  /suporte Preciso de ajuda   
+║  com minha compra            
+╚══════════════════════════════╝
+`.trim()
     });
     return;
   }
@@ -322,10 +469,20 @@ async function handleSuporte(sock, sender, args) {
   db.createSupportTicket(formatPhone(sender), message);
   
   await sock.sendMessage(sender, { 
-    text: 'Ticket de suporte criado com sucesso!\n\nUm administrador respondera em breve.' 
+    text: `
+╔══════════════════════════════╗
+║  ✅ *TICKET CRIADO!*         
+╠══════════════════════════════╣
+║                              
+║  🎧 Um administrador         
+║  responderá em breve.        
+║                              
+║  ⏰ Aguarde...               
+╚══════════════════════════════╝
+`.trim()
   });
 
-  await notifyAdmins(sock, `*Novo Ticket de Suporte*\n\nDe: ${sender}\nMensagem: ${message}`);
+  await notifyAdmins(sock, `🎧 *Novo Ticket de Suporte*\n\n📱 De: ${sender}\n💬 Mensagem: ${message}`);
 }
 
 async function handleFeedback(sock, sender, args) {
@@ -333,7 +490,17 @@ async function handleFeedback(sock, sender, args) {
   
   if (!message) {
     await sock.sendMessage(sender, { 
-      text: 'Use: /feedback <sua mensagem>\nExemplo: /feedback Otimo atendimento!' 
+      text: `
+╔══════════════════════════════╗
+║     ⭐ *FEEDBACK* ⭐          
+╠══════════════════════════════╣
+║                              
+║  Use: /feedback <mensagem>   
+║                              
+║  📌 Exemplo:                 
+║  /feedback Ótimo atendimento!
+╚══════════════════════════════╝
+`.trim()
     });
     return;
   }
@@ -341,105 +508,132 @@ async function handleFeedback(sock, sender, args) {
   db.createFeedback(formatPhone(sender), message);
   
   await sock.sendMessage(sender, { 
-    text: 'Feedback enviado com sucesso!\n\nAgradecemos sua opiniao!' 
+    text: `
+╔══════════════════════════════╗
+║  ✅ *FEEDBACK ENVIADO!*      
+╠══════════════════════════════╣
+║                              
+║  🙏 Agradecemos sua opinião! 
+╚══════════════════════════════╝
+`.trim()
   });
 
-  await notifyAdmins(sock, `*Novo Feedback*\n\nDe: ${sender}\nMensagem: ${message}`);
+  await notifyAdmins(sock, `⭐ *Novo Feedback*\n\n📱 De: ${sender}\n💬 Mensagem: ${message}`);
 }
 
 // ==================== COMANDOS ADMIN ====================
 
 async function handleAdminMenu(sock, sender) {
-  const menu = `*MENU ADMIN*
-
-*PRODUTOS*
-/addproduto - Adicionar produto
-/editproduto <id> - Editar produto
-/delproduto <id> - Remover produto
-/addestoque <id> - Add itens estoque
-/addbanner <id> <url> - Add banner
-
-*CATEGORIAS*
-/addcategoria <nome> - Criar categoria
-/listcategorias - Listar categorias
-/delcategoria <id> - Remover categoria
-
-*USUARIOS*
-/usuarios - Listar usuarios
-/addsaldo <num> <valor> - Add saldo
-/setadmin <num> - Tornar admin
-
-*RELATORIOS*
-/stats - Estatisticas
-/vendas - Ver vendas
-/tickets - Ver tickets
-/feedbacks - Ver feedbacks
-
-*CONFIG*
-/broadcast <msg> - Enviar para todos
-/config - Ver configuracoes`.trim();
+  const menu = `
+╔══════════════════════════════╗
+║     ⚙️ *MENU ADMIN* ⚙️       
+╠══════════════════════════════╣
+║                              
+║  📦 *PRODUTOS*               
+║  ─────────────────────────   
+║  /addproduto - Adicionar     
+║  /editproduto <id> - Editar  
+║  /delproduto <id> - Remover  
+║  /addestoque <id> - Estoque  
+║  /addbanner <id> <url>       
+║                              
+║  🏷️ *CATEGORIAS*             
+║  ─────────────────────────   
+║  /addcategoria <nome>        
+║  /listcategorias             
+║  /delcategoria <id>          
+║                              
+║  👥 *USUÁRIOS*               
+║  ─────────────────────────   
+║  /usuarios - Listar          
+║  /addsaldo <num> <valor>     
+║  /setadmin <num>             
+║                              
+║  📊 *RELATÓRIOS*             
+║  ─────────────────────────   
+║  /stats - Estatísticas       
+║  /vendas - Ver vendas        
+║  /tickets - Ver tickets      
+║  /feedbacks - Ver feedbacks  
+║                              
+║  ⚙️ *CONFIG*                 
+║  ─────────────────────────   
+║  /broadcast <msg>            
+║  /config - Configurações     
+╚══════════════════════════════╝
+`.trim();
 
   await sock.sendMessage(sender, { text: menu });
 }
 
 async function handleAddCategoria(sock, sender, args) {
   if (!db.isAdmin(formatPhone(sender))) {
-    await sock.sendMessage(sender, { text: 'Sem permissao.' });
+    await sock.sendMessage(sender, { text: '❌ Sem permissão.' });
     return;
   }
 
   const name = args.join(' ');
   if (!name) {
-    await sock.sendMessage(sender, { text: 'Use: /addcategoria <nome>\nExemplo: /addcategoria Streaming' });
+    await sock.sendMessage(sender, { text: '📌 Use: /addcategoria <nome>\n\nExemplo: /addcategoria Streaming' });
     return;
   }
 
   const id = db.createCategory(name);
-  await sock.sendMessage(sender, { text: `Categoria "${name}" criada com ID: ${id}` });
+  await sock.sendMessage(sender, { text: `✅ Categoria "${name}" criada com ID: ${id}` });
 }
 
 async function handleListCategorias(sock, sender) {
   if (!db.isAdmin(formatPhone(sender))) {
-    await sock.sendMessage(sender, { text: 'Sem permissao.' });
+    await sock.sendMessage(sender, { text: '❌ Sem permissão.' });
     return;
   }
 
   const categories = db.getCategories(false);
   
   if (categories.length === 0) {
-    await sock.sendMessage(sender, { text: 'Nenhuma categoria cadastrada.' });
+    await sock.sendMessage(sender, { text: '📭 Nenhuma categoria cadastrada.' });
     return;
   }
 
-  let message = '*CATEGORIAS*\n';
+  let message = `
+╔══════════════════════════════╗
+║     🏷️ *CATEGORIAS* 🏷️       
+╠══════════════════════════════╣`;
+
   for (const cat of categories) {
-    const status = cat.is_active ? '' : ' (inativa)';
-    message += `\n${cat.id}. ${cat.name}${status}`;
-    if (cat.banner_url) message += ' [banner]';
+    const status = cat.is_active ? '✅' : '❌';
+    const banner = cat.banner_url ? '🖼️' : '';
+    message += `
+║                              
+║  ${status} ${cat.id}. ${cat.name} ${banner}`;
   }
 
-  await sock.sendMessage(sender, { text: message });
+  message += `
+║                              
+╚══════════════════════════════╝`;
+
+  await sock.sendMessage(sender, { text: message.trim() });
 }
 
 async function handleDelCategoria(sock, sender, args) {
   if (!db.isAdmin(formatPhone(sender))) {
-    await sock.sendMessage(sender, { text: 'Sem permissao.' });
+    await sock.sendMessage(sender, { text: '❌ Sem permissão.' });
     return;
   }
 
   const id = parseInt(args[0]);
   if (!id) {
-    await sock.sendMessage(sender, { text: 'Use: /delcategoria <id>' });
+    await sock.sendMessage(sender, { text: '📌 Use: /delcategoria <id>' });
     return;
   }
 
   db.deleteCategory(id);
-  await sock.sendMessage(sender, { text: `Categoria ${id} removida.` });
+  await sock.sendMessage(sender, { text: `✅ Categoria ${id} removida.` });
 }
 
 async function handleAddBanner(sock, sender, args) {
   if (!db.isAdmin(formatPhone(sender))) {
-    await sock.sendMessage(sender, { text: 'Sem permissao.' });
+    await sock.sendMessage(sender, { text: '❌ Sem permissão.' });
     return;
   }
 
@@ -447,23 +641,23 @@ async function handleAddBanner(sock, sender, args) {
   const bannerUrl = args[1];
 
   if (!productId || !bannerUrl) {
-    await sock.sendMessage(sender, { text: 'Use: /addbanner <id_produto> <url_imagem>' });
+    await sock.sendMessage(sender, { text: '📌 Use: /addbanner <id_produto> <url_imagem>' });
     return;
   }
 
   const product = db.getProduct(productId);
   if (!product) {
-    await sock.sendMessage(sender, { text: 'Produto nao encontrado.' });
+    await sock.sendMessage(sender, { text: '❌ Produto não encontrado.' });
     return;
   }
 
   db.updateProduct(productId, { banner_url: bannerUrl });
-  await sock.sendMessage(sender, { text: `Banner adicionado ao produto "${product.name}"!` });
+  await sock.sendMessage(sender, { text: `✅ Banner adicionado ao produto "${product.name}"!` });
 }
 
 async function handleAddProduto(sock, sender, args) {
   if (!db.isAdmin(formatPhone(sender))) {
-    await sock.sendMessage(sender, { text: 'Sem permissao.' });
+    await sock.sendMessage(sender, { text: '❌ Sem permissão.' });
     return;
   }
 
@@ -472,7 +666,21 @@ async function handleAddProduto(sock, sender, args) {
   
   if (data.length < 2) {
     await sock.sendMessage(sender, { 
-      text: 'Use: /addproduto Nome|Descricao1|Descricao2|Preco|Categoria\n\nExemplo:\n/addproduto Netflix Premium|30 dias|Entrega automatica|29.90|Streaming' 
+      text: `
+╔══════════════════════════════╗
+║  📦 *ADICIONAR PRODUTO*      
+╠══════════════════════════════╣
+║                              
+║  Use o formato:              
+║  /addproduto Nome|Desc1|     
+║  Desc2|Preço|Categoria       
+║                              
+║  📌 Exemplo:                 
+║  /addproduto Netflix Premium|
+║  30 dias|Entrega automática| 
+║  29.90|Streaming             
+╚══════════════════════════════╝
+`.trim()
     });
     return;
   }
@@ -480,7 +688,7 @@ async function handleAddProduto(sock, sender, args) {
   const price = parseFloat(data.find(d => !isNaN(parseFloat(d.replace(',', '.'))))?.replace(',', '.') || '0');
   
   if (price <= 0) {
-    await sock.sendMessage(sender, { text: 'Preco invalido.' });
+    await sock.sendMessage(sender, { text: '❌ Preço inválido.' });
     return;
   }
 
@@ -497,13 +705,27 @@ async function handleAddProduto(sock, sender, args) {
   const productId = db.createProduct(productData);
   
   await sock.sendMessage(sender, { 
-    text: `Produto criado com sucesso!\n\nID: ${productId}\nNome: ${productData.name}\nPreco: ${formatMoney(productData.price)}\nCategoria: ${productData.category}\n\nAdicione estoque com:\n/addestoque ${productId} <conteudo>` 
+    text: `
+╔══════════════════════════════╗
+║  ✅ *PRODUTO CRIADO!*        
+╠══════════════════════════════╣
+║                              
+║  🆔 ID: ${productId}
+║  📦 Nome: ${productData.name}
+║  💵 Preço: ${formatMoney(productData.price)}
+║  🏷️ Categoria: ${productData.category}
+║                              
+╠══════════════════════════════╣
+║  Adicione estoque com:       
+║  /addestoque ${productId} <conteúdo>
+╚══════════════════════════════╝
+`.trim()
   });
 }
 
 async function handleAddEstoque(sock, sender, args) {
   if (!db.isAdmin(formatPhone(sender))) {
-    await sock.sendMessage(sender, { text: 'Sem permissao.' });
+    await sock.sendMessage(sender, { text: '❌ Sem permissão.' });
     return;
   }
 
@@ -512,14 +734,29 @@ async function handleAddEstoque(sock, sender, args) {
   
   if (!productId || !content) {
     await sock.sendMessage(sender, { 
-      text: 'Use: /addestoque <id> <conteudo>\n\nPara multiplos itens, separe por linha:\n/addestoque 1 conta1@email.com\nconta2@email.com\nconta3@email.com' 
+      text: `
+╔══════════════════════════════╗
+║  📦 *ADICIONAR ESTOQUE*      
+╠══════════════════════════════╣
+║                              
+║  Use: /addestoque <id> <item>
+║                              
+║  Para múltiplos itens:       
+║  Separe por linha            
+║                              
+║  📌 Exemplo:                 
+║  /addestoque 1               
+║  conta1@email.com            
+║  conta2@email.com            
+╚══════════════════════════════╝
+`.trim()
     });
     return;
   }
 
   const product = db.getProduct(productId);
   if (!product) {
-    await sock.sendMessage(sender, { text: 'Produto nao encontrado.' });
+    await sock.sendMessage(sender, { text: '❌ Produto não encontrado.' });
     return;
   }
 
@@ -528,68 +765,77 @@ async function handleAddEstoque(sock, sender, args) {
   if (items.length > 1) {
     db.addStockItems(productId, items);
     await sock.sendMessage(sender, { 
-      text: `${items.length} itens adicionados ao estoque de "${product.name}"!` 
+      text: `✅ ${items.length} itens adicionados ao estoque de "${product.name}"!` 
     });
   } else {
     db.addStockItem(productId, content);
     await sock.sendMessage(sender, { 
-      text: `Item adicionado ao estoque de "${product.name}"!` 
+      text: `✅ Item adicionado ao estoque de "${product.name}"!` 
     });
   }
 }
 
 async function handleDelProduto(sock, sender, args) {
   if (!db.isAdmin(formatPhone(sender))) {
-    await sock.sendMessage(sender, { text: 'Sem permissao.' });
+    await sock.sendMessage(sender, { text: '❌ Sem permissão.' });
     return;
   }
 
   const productId = parseInt(args[0]);
   if (!productId) {
-    await sock.sendMessage(sender, { text: 'Use: /delproduto <id>' });
+    await sock.sendMessage(sender, { text: '📌 Use: /delproduto <id>' });
     return;
   }
 
   const product = db.getProduct(productId);
   if (!product) {
-    await sock.sendMessage(sender, { text: 'Produto nao encontrado.' });
+    await sock.sendMessage(sender, { text: '❌ Produto não encontrado.' });
     return;
   }
 
   db.deleteProduct(productId);
-  await sock.sendMessage(sender, { text: `Produto "${product.name}" removido!` });
+  await sock.sendMessage(sender, { text: `✅ Produto "${product.name}" removido!` });
 }
 
 async function handleStats(sock, sender) {
   if (!db.isAdmin(formatPhone(sender))) {
-    await sock.sendMessage(sender, { text: 'Sem permissao.' });
+    await sock.sendMessage(sender, { text: '❌ Sem permissão.' });
     return;
   }
 
   const stats = db.getStats();
   
-  const message = `*ESTATISTICAS*
-
-Usuarios: ${stats.totalUsers}
-Produtos ativos: ${stats.totalProducts}
-Categorias: ${stats.totalCategories}
-Total de vendas: ${stats.totalPurchases}
-Receita total: ${formatMoney(stats.totalRevenue)}
-
-*HOJE*
-Vendas: ${stats.todaySales}
-Receita: ${formatMoney(stats.todayRevenue)}
-
-Pagamentos pendentes: ${stats.pendingPayments}
-Tickets abertos: ${stats.openTickets}
-Feedbacks pendentes: ${stats.pendingFeedbacks}`.trim();
+  const message = `
+╔══════════════════════════════╗
+║     📊 *ESTATÍSTICAS* 📊     
+╠══════════════════════════════╣
+║                              
+║  👥 Usuários: ${stats.totalUsers}
+║  📦 Produtos ativos: ${stats.totalProducts}
+║  🏷️ Categorias: ${stats.totalCategories}
+║  🛒 Total de vendas: ${stats.totalPurchases}
+║  💰 Receita total: ${formatMoney(stats.totalRevenue)}
+║                              
+╠══════════════════════════════╣
+║     📅 *HOJE*                
+╠══════════════════════════════╣
+║                              
+║  🛒 Vendas: ${stats.todaySales}
+║  💰 Receita: ${formatMoney(stats.todayRevenue)}
+║                              
+╠══════════════════════════════╣
+║  ⏳ Pgtos pendentes: ${stats.pendingPayments}
+║  🎧 Tickets abertos: ${stats.openTickets}
+║  ⭐ Feedbacks: ${stats.pendingFeedbacks}
+╚══════════════════════════════╝
+`.trim();
 
   await sock.sendMessage(sender, { text: message });
 }
 
 async function handleAddSaldo(sock, sender, args) {
   if (!db.isAdmin(formatPhone(sender))) {
-    await sock.sendMessage(sender, { text: 'Sem permissao.' });
+    await sock.sendMessage(sender, { text: '❌ Sem permissão.' });
     return;
   }
 
@@ -598,7 +844,7 @@ async function handleAddSaldo(sock, sender, args) {
 
   if (!phone || !amount || isNaN(amount)) {
     await sock.sendMessage(sender, { 
-      text: 'Use: /addsaldo <numero> <valor>\nExemplo: /addsaldo 5511999999999 50' 
+      text: '📌 Use: /addsaldo <número> <valor>\n\nExemplo: /addsaldo 5511999999999 50' 
     });
     return;
   }
@@ -607,60 +853,94 @@ async function handleAddSaldo(sock, sender, args) {
   const user = db.updateUserBalance(phone, amount);
   
   await sock.sendMessage(sender, { 
-    text: `Saldo adicionado!\n\nNumero: ${phone}\nValor: ${formatMoney(amount)}\nNovo saldo: ${formatMoney(user.balance)}` 
+    text: `
+╔══════════════════════════════╗
+║  ✅ *SALDO ADICIONADO*       
+╠══════════════════════════════╣
+║                              
+║  📱 Número: ${phone}
+║  💵 Valor: ${formatMoney(amount)}
+║  💰 Novo saldo: ${formatMoney(user.balance)}
+╚══════════════════════════════╝
+`.trim()
   });
 }
 
 async function handleUsuarios(sock, sender) {
   if (!db.isAdmin(formatPhone(sender))) {
-    await sock.sendMessage(sender, { text: 'Sem permissao.' });
+    await sock.sendMessage(sender, { text: '❌ Sem permissão.' });
     return;
   }
 
   const users = db.getAllUsers();
   
-  let message = `*USUARIOS (${users.length})*\n`;
+  let message = `
+╔══════════════════════════════╗
+║  👥 *USUÁRIOS (${users.length})*
+╠══════════════════════════════╣`;
 
   for (const user of users.slice(0, 20)) {
-    const admin = user.is_admin ? ' [ADMIN]' : '';
-    message += `\n${user.phone}${admin}\n   Saldo: ${formatMoney(user.balance)}\n`;
+    const admin = user.is_admin ? ' ⚙️' : '';
+    message += `
+║                              
+║  📱 ${user.phone}${admin}
+║     💰 Saldo: ${formatMoney(user.balance)}`;
   }
 
   if (users.length > 20) {
-    message += `\n... e mais ${users.length - 20} usuarios`;
+    message += `
+║                              
+║  ... e mais ${users.length - 20} usuários`;
   }
 
-  await sock.sendMessage(sender, { text: message });
+  message += `
+║                              
+╚══════════════════════════════╝`;
+
+  await sock.sendMessage(sender, { text: message.trim() });
 }
 
 async function handleTickets(sock, sender) {
   if (!db.isAdmin(formatPhone(sender))) {
-    await sock.sendMessage(sender, { text: 'Sem permissao.' });
+    await sock.sendMessage(sender, { text: '❌ Sem permissão.' });
     return;
   }
 
   const tickets = db.getOpenSupportTickets();
   
   if (tickets.length === 0) {
-    await sock.sendMessage(sender, { text: 'Nenhum ticket aberto.' });
+    await sock.sendMessage(sender, { text: '✅ Nenhum ticket aberto.' });
     return;
   }
 
-  let message = `*TICKETS ABERTOS (${tickets.length})*\n`;
+  let message = `
+╔══════════════════════════════╗
+║  🎧 *TICKETS ABERTOS (${tickets.length})*
+╠══════════════════════════════╣`;
 
   for (const ticket of tickets) {
     const date = new Date(ticket.created_at).toLocaleString('pt-BR');
-    message += `\nID: ${ticket.id}\n${ticket.phone}\n${ticket.message}\n${date}\n`;
+    message += `
+║                              
+║  🆔 ID: ${ticket.id}
+║  📱 ${ticket.phone}
+║  💬 ${ticket.message}
+║  🕐 ${date}`;
   }
 
-  message += '\nResponda com:\n/respticket <id> <mensagem>';
+  message += `
+║                              
+╠══════════════════════════════╣
+║  Responda com:               
+║  /respticket <id> <mensagem> 
+╚══════════════════════════════╝`;
 
-  await sock.sendMessage(sender, { text: message });
+  await sock.sendMessage(sender, { text: message.trim() });
 }
 
 async function handleRespTicket(sock, sender, args) {
   if (!db.isAdmin(formatPhone(sender))) {
-    await sock.sendMessage(sender, { text: 'Sem permissao.' });
+    await sock.sendMessage(sender, { text: '❌ Sem permissão.' });
     return;
   }
 
@@ -668,47 +948,118 @@ async function handleRespTicket(sock, sender, args) {
   const response = args.slice(1).join(' ');
 
   if (!ticketId || !response) {
-    await sock.sendMessage(sender, { text: 'Use: /respticket <id> <resposta>' });
+    await sock.sendMessage(sender, { text: '📌 Use: /respticket <id> <resposta>' });
     return;
   }
 
   db.respondSupportTicket(ticketId, response);
-  await sock.sendMessage(sender, { text: `Ticket #${ticketId} respondido!` });
+  await sock.sendMessage(sender, { text: `✅ Ticket #${ticketId} respondido!` });
 }
 
 async function handleFeedbacks(sock, sender) {
   if (!db.isAdmin(formatPhone(sender))) {
-    await sock.sendMessage(sender, { text: 'Sem permissao.' });
+    await sock.sendMessage(sender, { text: '❌ Sem permissão.' });
     return;
   }
 
   const feedbacks = db.getAllFeedbacks();
   
   if (feedbacks.length === 0) {
-    await sock.sendMessage(sender, { text: 'Nenhum feedback recebido.' });
+    await sock.sendMessage(sender, { text: '📭 Nenhum feedback recebido.' });
     return;
   }
 
-  let message = `*FEEDBACKS (${feedbacks.length})*\n`;
+  let message = `
+╔══════════════════════════════╗
+║  ⭐ *FEEDBACKS (${feedbacks.length})*
+╠══════════════════════════════╣`;
 
   for (const fb of feedbacks.slice(0, 10)) {
     const date = new Date(fb.created_at).toLocaleString('pt-BR');
-    const status = fb.status === 'pending' ? '[pendente]' : '[respondido]';
-    message += `\n${status} ID: ${fb.id}\n${fb.phone}\n${fb.message}\n${date}\n`;
+    const status = fb.status === 'pending' ? '⏳' : '✅';
+    message += `
+║                              
+║  ${status} ID: ${fb.id}
+║  📱 ${fb.phone}
+║  💬 ${fb.message}
+║  🕐 ${date}`;
   }
 
-  await sock.sendMessage(sender, { text: message });
+  if (feedbacks.length > 10) {
+    message += `
+║                              
+║  ... e mais ${feedbacks.length - 10} feedback(s)`;
+  }
+
+  message += `
+║                              
+╚══════════════════════════════╝`;
+
+  await sock.sendMessage(sender, { text: message.trim() });
+}
+
+async function handleVendas(sock, sender) {
+  if (!db.isAdmin(formatPhone(sender))) {
+    await sock.sendMessage(sender, { text: '❌ Sem permissão.' });
+    return;
+  }
+
+  const sales = db.getRecentSales(20);
+  
+  if (sales.length === 0) {
+    await sock.sendMessage(sender, { text: '📭 Nenhuma venda registrada.' });
+    return;
+  }
+
+  let message = `
+╔══════════════════════════════╗
+║  🛒 *VENDAS RECENTES*        
+╠══════════════════════════════╣`;
+
+  for (const sale of sales) {
+    const dateTime = formatDateTime(sale.purchase_date, sale.purchase_time);
+    message += `
+║                              
+║  📦 ${sale.product_name}
+║  📱 ${sale.phone}
+║  📊 Qtd: ${sale.quantity} | 💵 ${formatMoney(sale.total_price)}
+║  🕐 ${dateTime}`;
+  }
+
+  message += `
+║                              
+╚══════════════════════════════╝`;
+
+  await sock.sendMessage(sender, { text: message.trim() });
+}
+
+async function handleSetAdmin(sock, sender, args) {
+  if (!db.isAdmin(formatPhone(sender))) {
+    await sock.sendMessage(sender, { text: '❌ Sem permissão.' });
+    return;
+  }
+
+  const phone = formatPhone(args[0] || '');
+  if (!phone) {
+    await sock.sendMessage(sender, { text: '📌 Use: /setadmin <número>\n\nExemplo: /setadmin 5511999999999' });
+    return;
+  }
+
+  db.createUser(phone);
+  db.setAdmin(phone, true);
+  
+  await sock.sendMessage(sender, { text: `✅ Usuário ${phone} agora é administrador!` });
 }
 
 async function handleBroadcast(sock, sender, args) {
   if (!db.isAdmin(formatPhone(sender))) {
-    await sock.sendMessage(sender, { text: 'Sem permissao.' });
+    await sock.sendMessage(sender, { text: '❌ Sem permissão.' });
     return;
   }
 
   const message = args.join(' ');
   if (!message) {
-    await sock.sendMessage(sender, { text: 'Use: /broadcast <mensagem>' });
+    await sock.sendMessage(sender, { text: '📌 Use: /broadcast <mensagem>' });
     return;
   }
 
@@ -717,190 +1068,133 @@ async function handleBroadcast(sock, sender, args) {
 
   for (const user of users) {
     try {
-      await sock.sendMessage(`${user.phone}@s.whatsapp.net`, { 
-        text: `*Mensagem do SabioStore*\n\n${message}` 
-      });
+      const jid = user.phone.includes('@') ? user.phone : user.phone + '@s.whatsapp.net';
+      await sock.sendMessage(jid, { text: `📢 *AVISO*\n\n${message}` });
       sent++;
-      await new Promise(r => setTimeout(r, 2000));
-    } catch (e) {
-      console.error(`Error sending to ${user.phone}:`, e.message);
-    }
+      await new Promise(r => setTimeout(r, 1000));
+    } catch (e) {}
   }
 
-  await sock.sendMessage(sender, { text: `Mensagem enviada para ${sent} usuarios!` });
+  await sock.sendMessage(sender, { text: `✅ Mensagem enviada para ${sent} usuários!` });
 }
 
-async function handleVendas(sock, sender) {
+async function handleConfig(sock, sender) {
   if (!db.isAdmin(formatPhone(sender))) {
-    await sock.sendMessage(sender, { text: 'Sem permissao.' });
+    await sock.sendMessage(sender, { text: '❌ Sem permissão.' });
     return;
   }
 
-  const purchases = db.getAllPurchases();
-  
-  if (purchases.length === 0) {
-    await sock.sendMessage(sender, { text: 'Nenhuma venda realizada.' });
-    return;
-  }
+  const botName = db.getSetting('bot_name') || 'SabioStore';
+  const pixKey = db.getSetting('pix_key') || 'Não configurado';
+  const welcomeMsg = db.getSetting('welcome_message') || 'Padrão';
 
-  let message = `*VENDAS (${purchases.length})*\n`;
-
-  let total = 0;
-  for (const p of purchases.slice(0, 15)) {
-    const dateTime = formatDateTime(p.purchase_date, p.purchase_time);
-    message += `\n${p.product_name}\n${p.phone}\n${formatMoney(p.total_price)}\n${dateTime}\n`;
-    total += p.total_price;
-  }
-
-  message += `\n-------------------\nTotal: ${formatMoney(total)}`;
+  const message = `
+╔══════════════════════════════╗
+║     ⚙️ *CONFIGURAÇÕES* ⚙️    
+╠══════════════════════════════╣
+║                              
+║  🤖 Nome do Bot:             
+║     ${botName}
+║                              
+║  💳 Chave PIX:               
+║     ${pixKey}
+║                              
+║  👋 Mensagem de boas-vindas: 
+║     ${welcomeMsg}
+║                              
+╠══════════════════════════════╣
+║  Para alterar, acesse o      
+║  painel web administrativo   
+╚══════════════════════════════╝
+`.trim();
 
   await sock.sendMessage(sender, { text: message });
 }
 
-// ==================== HELPERS ====================
+// ==================== UTILIDADES ====================
 
 async function checkLowStock(sock) {
-  const lowStockProducts = db.getLowStockProducts();
+  const products = db.getProducts(true);
   
-  if (lowStockProducts.length > 0) {
-    let alertMessage = '*ALERTA DE ESTOQUE BAIXO*\n\n';
-    for (const p of lowStockProducts) {
-      alertMessage += `${p.name}: ${p.available_stock} unidades\n`;
+  for (const product of products) {
+    const stock = db.getProductStock(product.id);
+    if (stock > 0 && stock <= 3) {
+      await notifyAdmins(sock, `⚠️ *Estoque Baixo*\n\n📦 ${product.name}\n📊 Apenas ${stock} unidade(s) restante(s)!`);
     }
-    await notifyAdmins(sock, alertMessage);
   }
 }
 
 async function notifyAdmins(sock, message) {
-  const admins = db.getAllUsers().filter(u => u.is_admin);
-  
-  for (const admin of admins) {
-    try {
-      await sock.sendMessage(`${admin.phone}@s.whatsapp.net`, { text: message });
-    } catch (e) {
-      console.error(`Error notifying admin ${admin.phone}:`, e.message);
+  try {
+    const admins = db.getAdmins();
+    
+    for (const admin of admins) {
+      try {
+        const jid = admin.phone.includes('@') ? admin.phone : admin.phone + '@s.whatsapp.net';
+        await sock.sendMessage(jid, { text: message });
+        await new Promise(r => setTimeout(r, 500));
+      } catch (e) {}
     }
+  } catch (error) {
+    console.error('Error notifying admins:', error);
   }
 }
 
-// ==================== MAIN HANDLER ====================
+// ==================== HANDLER PRINCIPAL ====================
 
-async function handleMessage(sock, sender, message) {
-  const text = message.trim();
-  
-  if (sender.includes('@g.us')) return;
-  
-  db.createUser(formatPhone(sender));
-  
-  if (!text.startsWith('/')) {
-    const botName = db.getSetting('bot_name') || 'SabioStore';
-    await sock.sendMessage(sender, { 
-      text: `Ola! Bem-vindo ao *${botName}*!\n\nDigite /menu para ver os comandos disponiveis.` 
-    });
-    return;
-  }
+async function handleMessage(sock, sender, text) {
+  const args = text.trim().split(/\s+/);
+  const command = args.shift().toLowerCase();
+  const phone = formatPhone(sender);
 
-  const [command, ...args] = text.slice(1).split(' ');
-  const cmd = command.toLowerCase();
-  const isUserAdmin = db.isAdmin(formatPhone(sender));
+  // Criar usuario se nao existir
+  db.createUser(phone);
 
-  switch (cmd) {
-    case 'menu':
-    case 'start':
-    case 'inicio':
-      await handleMenu(sock, sender);
-      break;
-    case 'categorias':
-      await handleCategorias(sock, sender);
-      break;
-    case 'estoque':
-    case 'produtos':
-    case 'loja':
-      await handleEstoque(sock, sender, args);
-      break;
-    case 'saldo':
-      await handleSaldo(sock, sender);
-      break;
-    case 'pix':
-    case 'depositar':
-    case 'deposito':
-      await handlePix(sock, sender, args);
-      break;
-    case 'comprar':
-    case 'buy':
-      await handleComprar(sock, sender, args);
-      break;
-    case 'meuspedidos':
-    case 'pedidos':
-    case 'compras':
-      await handleMeusPedidos(sock, sender);
-      break;
-    case 'suporte':
-    case 'ajuda':
-    case 'help':
-      await handleSuporte(sock, sender, args);
-      break;
-    case 'feedback':
-      await handleFeedback(sock, sender, args);
-      break;
+  const commands = {
+    // Publicos
+    '/start': () => handleMenu(sock, sender),
+    '/menu': () => handleMenu(sock, sender),
+    '/help': () => handleMenu(sock, sender),
+    '/estoque': () => handleEstoque(sock, sender, args),
+    '/loja': () => handleEstoque(sock, sender, args),
+    '/categorias': () => handleCategorias(sock, sender),
+    '/saldo': () => handleSaldo(sock, sender),
+    '/pix': () => handlePix(sock, sender, args),
+    '/comprar': () => handleComprar(sock, sender, args),
+    '/buy': () => handleComprar(sock, sender, args),
+    '/meuspedidos': () => handleMeusPedidos(sock, sender),
+    '/pedidos': () => handleMeusPedidos(sock, sender),
+    '/suporte': () => handleSuporte(sock, sender, args),
+    '/feedback': () => handleFeedback(sock, sender, args),
     
-    // Admin commands
-    case 'admin':
-      if (isUserAdmin) await handleAdminMenu(sock, sender);
-      else await sock.sendMessage(sender, { text: 'Sem permissao.' });
-      break;
-    case 'addcategoria':
-      await handleAddCategoria(sock, sender, args);
-      break;
-    case 'listcategorias':
-      await handleListCategorias(sock, sender);
-      break;
-    case 'delcategoria':
-      await handleDelCategoria(sock, sender, args);
-      break;
-    case 'addbanner':
-      await handleAddBanner(sock, sender, args);
-      break;
-    case 'addproduto':
-      await handleAddProduto(sock, sender, args);
-      break;
-    case 'addestoque':
-    case 'abastecer':
-      await handleAddEstoque(sock, sender, args);
-      break;
-    case 'delproduto':
-      await handleDelProduto(sock, sender, args);
-      break;
-    case 'stats':
-    case 'estatisticas':
-      await handleStats(sock, sender);
-      break;
-    case 'addsaldo':
-      await handleAddSaldo(sock, sender, args);
-      break;
-    case 'usuarios':
-    case 'users':
-      await handleUsuarios(sock, sender);
-      break;
-    case 'tickets':
-      await handleTickets(sock, sender);
-      break;
-    case 'respticket':
-      await handleRespTicket(sock, sender, args);
-      break;
-    case 'feedbacks':
-      await handleFeedbacks(sock, sender);
-      break;
-    case 'broadcast':
-      await handleBroadcast(sock, sender, args);
-      break;
-    case 'vendas':
-      await handleVendas(sock, sender);
-      break;
-    
-    default:
-      await sock.sendMessage(sender, { text: 'Comando nao reconhecido. Digite /menu para ver os comandos.' });
+    // Admin
+    '/admin': () => handleAdminMenu(sock, sender),
+    '/addproduto': () => handleAddProduto(sock, sender, args),
+    '/addestoque': () => handleAddEstoque(sock, sender, args),
+    '/delproduto': () => handleDelProduto(sock, sender, args),
+    '/addbanner': () => handleAddBanner(sock, sender, args),
+    '/addcategoria': () => handleAddCategoria(sock, sender, args),
+    '/listcategorias': () => handleListCategorias(sock, sender),
+    '/delcategoria': () => handleDelCategoria(sock, sender, args),
+    '/usuarios': () => handleUsuarios(sock, sender),
+    '/addsaldo': () => handleAddSaldo(sock, sender, args),
+    '/setadmin': () => handleSetAdmin(sock, sender, args),
+    '/stats': () => handleStats(sock, sender),
+    '/vendas': () => handleVendas(sock, sender),
+    '/tickets': () => handleTickets(sock, sender),
+    '/respticket': () => handleRespTicket(sock, sender, args),
+    '/feedbacks': () => handleFeedbacks(sock, sender),
+    '/broadcast': () => handleBroadcast(sock, sender, args),
+    '/config': () => handleConfig(sock, sender),
+  };
+
+  const handler = commands[command];
+  if (handler) {
+    await handler();
   }
 }
 
-module.exports = { handleMessage, notifyAdmins };
+module.exports = {
+  handleMessage,
+  notifyAdmins,
+};
