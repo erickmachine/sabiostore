@@ -33,7 +33,7 @@ async function handleMenu(sock, sender) {
 ╔════════════════════════╗
 ║  *${botName}*     
 ╠════════════════════════╣
-║ Ola! Seja bem-vindo(a)!
+║ Olá! Seja bem-vindo(a)!
 ║ 
 ║ Seu saldo: *${formatMoney(user.balance)}*
 ╠════════════════════════╣
